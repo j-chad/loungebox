@@ -1,0 +1,4 @@
+# 4× WD Reds in RAIDZ1
+array_pool_name: storage
+array_devices: []         # Fill with /dev/disk/by-id paths
+array_mountpoint: /mnt/storage

@@ -1,0 +1,30 @@
+# tasks/main.yml
+- name: Install required packages
+  apt:
+    name: zfsutils-linux
+    state: present
+    update_cache: yes
+
+##########################################################
+# RAIDZ1 pool for 4× WD Reds
+##########################################################
+
+- name: Fail if array_devices not set
+  fail:
+    msg: "array_devices must be defined with /dev/disk/by-id for your WD Reds"
+  when: array_devices | length == 0
+
+- name: Check if ZFS pool exists
+  command: zpool list -H -o name {{ array_pool_name }}
+  register: array_pool_check
+  failed_when: false
+  changed_when: false
+
+- name: Create RAIDZ1 pool if missing
+  command: >
+    zpool create -f {{ array_pool_name }}
+    raidz {{ array_devices | join(' ') }}
+  when: array_pool_check.rc != 0
+
+- name: Set mountpoint for array pool
+  command: zfs set mountpoint={{ array_mountpoint }} {{ array_pool_name }}
