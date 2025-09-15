@@ -3,6 +3,7 @@
     name:
       - xserver-xorg
       - xinit
+      - mesa-utils # For testing
     state: present
     install_recommends: no
     update_cache: yes
@@ -18,17 +19,22 @@
       - audio
       - input
       - plugdev
+      - tty
     append: yes
 - name: Create launch script
   copy:
-    dest: /usr/local/bin/launch.sh
+    dest: /usr/local/bin/launch
     content: |
       #!/bin/bash
       set -e
-      APP=${1:-{{default_app}}}
-      sudo systemctl isolate graphical.target
-      sudo -u {{desktop_user}} xinit $APP -- :{{display_number}} vt$(fgconsole)
-      sudo systemctl isolate multi-user.target
+      
+      APP=${1:-glxgears}
+      DISPLAY_NUMBER=${2:-1}
+      
+      echo "Starting $APP as desktop_user on X display :$DISPLAY_NUMBER"
+      
+      # Start a new VT and run X as desktop_user
+      sudo -u desktop_user openvt -s -- xinit "$APP" -- :$DISPLAY_NUMBER
     owner: root
     group: root
     mode: "0755"

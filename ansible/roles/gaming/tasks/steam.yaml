@@ -3,10 +3,10 @@
     name: snapd
     state: present
     update_cache: yes
-- name: Install Steam snap
-  snap:
-    name: steam
-    state: present
+- name: Install Steam snap (via command) # snap module is outdated
+  command: snap install steam
+  args:
+    creates: /snap/steam
 - name: Connect steam snap interfaces
   command: |
     snap connect steam:system-observe
