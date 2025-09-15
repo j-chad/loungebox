@@ -1,13 +1,10 @@
-- name: Update apt cache
-  apt:
-    update_cache: yes
-
 - name: Install ubuntu-drivers utility
   apt:
     name:
       - ubuntu-drivers-common
       - alsa-utils
     state: present
+    update_cache: yes
 
 - name: Check for NVIDIA GPUs
   command: ubuntu-drivers devices
