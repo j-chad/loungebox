@@ -40,5 +40,3 @@ autoinstall:
     # Enable SSH immediately
     - curtin in-target --target=/target -- systemctl enable ssh
     - curtin in-target --target=/target -- systemctl start ssh
-    # Expire password to force change on first login
-    - curtin in-target --target=/target -- chage -d 0 lounge
