@@ -1,0 +1,15 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install ubuntu-drivers utility
+  apt:
+    name:
+      - ubuntu-drivers-common
+      - alsa-utils
+    state: present
+
+- name: Install recommended NVIDIA driver
+  command: ubuntu-drivers install
+  register: nvidia_install
+  changed_when: nvidia_install.rc == 0

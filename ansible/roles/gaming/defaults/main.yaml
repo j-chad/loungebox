@@ -1,0 +1,5 @@
+desktop_env: xfce4
+display_manager: lightdm
+steam_user: loungeplayer
+steam_games_path: /mnt/games
+install_emulators: true
