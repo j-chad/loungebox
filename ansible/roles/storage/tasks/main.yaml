@@ -9,6 +9,18 @@
 # RAIDZ1 pool for 4× WD Reds
 ##########################################################
 
+- name: Gather all non-SSD disks
+  shell: |
+    ls -l /dev/disk/by-id/ | grep -v nvme | grep -E 'ata-|scsi-'
+  register: hdd_ids
+  changed_when: false
+  when: array_devices | length == 0
+
+- name: Show available disks
+  debug:
+    msg: "{{ hdd_ids.stdout_lines }}"
+  when: array_devices | length == 0
+
 - name: Fail if array_devices not set
   fail:
     msg: "array_devices must be defined with /dev/disk/by-id for your WD Reds"

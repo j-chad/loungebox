@@ -1,4 +1,4 @@
-- hosts: loungebox
+- hosts: virtual
   become: true
   roles:
     - storage
