@@ -1,0 +1,36 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: loungebox
+    username: lounge
+    password: lounge
+  ssh:
+    install-server: true
+    allow-pw: true
+  keyboard:
+    layout: au
+    locale: en_NZ.UTF-8
+  storage:
+    layout:
+      name: direct
+      match:
+        type: nvme
+      config:
+        - type: disk
+          id: nvme0n1
+          wipe: superblock-recursive
+          preserve: false
+          partitions:
+            - type: partition
+              size: 30G
+              fs-type: ext4
+              mount-point: /
+  packages:
+    - git
+    - nano
+    - curl
+  late-commands:
+    # Enable SSH immediately
+    - curtin in-target --target=/target -- systemctl enable ssh
+    - curtin in-target --target=/target -- systemctl start ssh
