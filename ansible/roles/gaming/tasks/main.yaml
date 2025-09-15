@@ -1,2 +1,3 @@
 #- import_tasks: nvidia.yaml
 - import_tasks: desktop.yaml
+- import_tasks: steam.yaml

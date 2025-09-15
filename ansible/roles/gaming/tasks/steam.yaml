@@ -1,0 +1,13 @@
+- name: Ensure Snap is installed
+  apt:
+    name: snapd
+    state: present
+    update_cache: yes
+- name: Install Steam snap
+  snap:
+    name: steam
+    state: present
+- name: Connect steam snap interfaces
+  command: |
+    snap connect steam:system-observe
+    snap connect steam:hardware-observe
