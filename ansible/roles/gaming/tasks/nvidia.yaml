@@ -9,6 +9,16 @@
       - alsa-utils
     state: present
 
+- name: Check for NVIDIA GPUs
+  command: ubuntu-drivers devices
+  register: gpu_check
+  changed_when: false
+
+- name: Fail if no NVIDIA GPU is detected
+  fail:
+    msg: "No NVIDIA GPU detected! Cannot install recommended driver."
+  when: "'nvidia-driver' not in gpu_check.stdout"
+
 - name: Install recommended NVIDIA driver
   command: ubuntu-drivers install
   register: nvidia_install
