@@ -1,16 +1,21 @@
 #cloud-config
 autoinstall:
   version: 1
+  interactive-sections:
+    - network
   identity:
     hostname: loungebox
     username: lounge
-    password: lounge
+    password: $1$TFljfm/3$5UJ9LpAdVSCFjOyYA6DMp/ # password: lounge
   ssh:
     install-server: true
     allow-pw: true
   keyboard:
     layout: au
-    locale: en_NZ.UTF-8
+  locale: en_NZ.UTF-8
+  timezone: Pacific/Auckland
+  drivers:
+    install: true
   storage:
     layout:
       name: direct
@@ -30,7 +35,10 @@ autoinstall:
     - git
     - nano
     - curl
+  updates: all
   late-commands:
     # Enable SSH immediately
     - curtin in-target --target=/target -- systemctl enable ssh
     - curtin in-target --target=/target -- systemctl start ssh
+    # Expire password to force change on first login
+    - curtin in-target --target=/target -- chage -d 0 lounge
