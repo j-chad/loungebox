@@ -13,9 +13,6 @@
               <option name="patterns">
                 <list>
                   <Item>
-                    <option name="path" value="ubuntu/meta-data.yaml" />
-                  </Item>
-                  <Item>
                     <option name="path" value="ubuntu/user-data.yaml" />
                   </Item>
                 </list>
