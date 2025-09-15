@@ -1,0 +1,10 @@
+- hosts: loungebox
+  become: true
+  roles:
+    - common
+    - nvidia
+    - docker
+    - steam
+    - emulators
+    - media
+    - homelab

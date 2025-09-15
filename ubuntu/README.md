@@ -1,27 +1,10 @@
-#!/usr/bin/env bash
-set -e
+## Ubuntu Setup Instructions
+To automate the setup of an Ubuntu environment, follow these steps:
+1. Download the Ubuntu ISO from the official website.
+2. Create a bootable USB drive using tools like Rufus or Etcher.
+3. Create a second bootable USB drive with the `seed.iso` file.
+4. Boot from the first USB drive and start the Ubuntu installation process.
+5. Login with the username `lounge` and password `lounge`.
 
-# Ask for password
-read -s -p "Enter password for ansible user: " PASSWORD
-echo
-read -s -p "Confirm password: " PASSWORD2
-echo
-if [ "$PASSWORD" != "$PASSWORD2" ]; then
-    echo "Passwords do not match"
-    exit 1
-fi
-
-# Hash the password
-HASH=$(openssl passwd -6 "$PASSWORD")
-
-# Generate user-data from template
-sed "s|{{PASSWORD_HASH}}|$HASH|g" user-data.template > user-data
-
-# Create minimal meta-data
-echo "instance-id: ansible-test-01" > meta-data
-echo "local-hostname: ansible-vm" >> meta-data
-
-# Create seed ISO
-genisoimage -output seed.iso -volid cidata -joliet -rock user-data meta-data
-
-echo "ISO created: seed.iso"
+## AutoInstall Documentation
+https://canonical-subiquity.readthedocs-hosted.com/en/latest/reference/autoinstall-reference.html
