@@ -1,7 +1,7 @@
 all:
   hosts:
     loungebox:
-      ansible_host: 192.168.205.3
+      ansible_host: 192.168.1.197
       ansible_user: lounge
       array_devices:
         - /dev/disk/by-id/ata-WDC_WD40EFZX-68AWUN0_WD-WX22DC1L71ZC

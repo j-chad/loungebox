@@ -6,18 +6,24 @@
       - gnupg
     state: present
 
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
 - name: Add Docker GPG key
-  apt_key:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    keyring: /etc/apt/keyrings/docker.gpg
-    state: present
+  shell: |
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  args:
+    creates: /etc/apt/keyrings/docker.gpg
 
 - name: Add Docker apt repository
   apt_repository:
     repo: >
       deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
       https://download.docker.com/linux/ubuntu
-      {{ ansible_distribution_release }} stable
+      {{ ansible_facts["distribution_release"] }} stable
     filename: docker
     state: present
 
