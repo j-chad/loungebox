@@ -1,0 +1,32 @@
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+
+- name: Set UFW default deny incoming
+  command: ufw default deny incoming
+  changed_when: false
+
+- name: Set UFW default allow outgoing
+  command: ufw default allow outgoing
+  changed_when: false
+
+- name: Allow SSH on local network
+  command: ufw allow from 192.168.0.0/16 to any port 22 proto tcp
+  changed_when: false
+
+- name: Allow SSH on Tailscale interface
+  command: ufw allow in on tailscale0 to any port 22 proto tcp
+  changed_when: false
+
+- name: Allow HTTP on Tailscale interface
+  command: ufw allow in on tailscale0 to any port 80 proto tcp
+  changed_when: false
+
+- name: Allow HTTPS on Tailscale interface
+  command: ufw allow in on tailscale0 to any port 443 proto tcp
+  changed_when: false
+
+- name: Enable UFW
+  command: ufw --force enable
+  changed_when: false

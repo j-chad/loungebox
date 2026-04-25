@@ -1,0 +1,47 @@
+- name: Install Tailscale GPG key
+  shell: |
+    curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg \
+      -o /usr/share/keyrings/tailscale-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/tailscale-archive-keyring.gpg
+
+- name: Add Tailscale apt repository
+  copy:
+    dest: /etc/apt/sources.list.d/tailscale.list
+    content: |
+      deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main
+    mode: "0644"
+
+- name: Install Tailscale
+  apt:
+    name: tailscale
+    state: present
+    update_cache: true
+
+- name: Enable and start tailscaled
+  systemd:
+    name: tailscaled
+    enabled: true
+    state: started
+
+- name: Check Tailscale status
+  command: tailscale status
+  register: ts_status
+  failed_when: false
+  changed_when: false
+
+- name: Authenticate Tailscale with auth key
+  command: tailscale up --authkey={{ tailscale_auth_key }}
+  when:
+    - tailscale_auth_key is defined
+    - "'Logged out' in ts_status.stdout or ts_status.rc != 0"
+
+- name: Remind to authenticate manually if no auth key
+  debug:
+    msg: >
+      Tailscale is installed but not authenticated.
+      Run 'sudo tailscale up' on the NAS to authenticate via browser,
+      or re-run with --extra-vars='tailscale_auth_key=tskey-...'
+  when:
+    - tailscale_auth_key is not defined
+    - "'Logged out' in ts_status.stdout or ts_status.rc != 0"

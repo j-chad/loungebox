@@ -4,3 +4,5 @@
     - base
     - storage
     - docker
+    - firewall
+    - tailscale
