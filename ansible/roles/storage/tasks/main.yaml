@@ -1,42 +1,80 @@
-# tasks/main.yml
-- name: Install required packages
+- name: Install ZFS utilities
   apt:
     name: zfsutils-linux
     state: present
-    update_cache: yes
+    update_cache: true
 
-##########################################################
-# RAIDZ1 pool for 4× WD Reds
-##########################################################
+# --- Pool creation ---
 
-- name: Gather all non-SSD disks
+- name: Discover available non-NVMe disks
   shell: |
-    ls -l /dev/disk/by-id/ | grep -v nvme | grep -E 'ata-|scsi-'
+    ls /dev/disk/by-id/ | grep -E '^ata-|^scsi-' | grep -v -- '-part'
   register: hdd_ids
   changed_when: false
   when: array_devices | length == 0
 
-- name: Show available disks
+- name: Show available disks (set array_devices in inventory)
   debug:
     msg: "{{ hdd_ids.stdout_lines }}"
   when: array_devices | length == 0
 
 - name: Fail if array_devices not set
   fail:
-    msg: "array_devices must be defined with /dev/disk/by-id for your WD Reds"
+    msg: >
+      array_devices must be defined with /dev/disk/by-id/ paths for your WD Reds.
+      Run the playbook once to see available disk IDs above.
   when: array_devices | length == 0
 
 - name: Check if ZFS pool exists
   command: zpool list -H -o name {{ array_pool_name }}
-  register: array_pool_check
+  register: pool_check
   failed_when: false
   changed_when: false
 
-- name: Create RAIDZ1 pool if missing
+- name: Create RAIDZ1 pool
   command: >
-    zpool create -f {{ array_pool_name }}
-    raidz {{ array_devices | join(' ') }}
-  when: array_pool_check.rc != 0
+    zpool create -f
+    -o ashift=12
+    -m {{ array_mountpoint }}
+    {{ array_pool_name }} raidz {{ array_devices | join(' ') }}
+  when: pool_check.rc != 0
 
-- name: Set mountpoint for array pool
-  command: zfs set mountpoint={{ array_mountpoint }} {{ array_pool_name }}
+# --- Datasets ---
+
+- name: Check if datasets exist
+  command: zfs list -H -o name {{ item.name }}
+  register: dataset_checks
+  failed_when: false
+  changed_when: false
+  loop: "{{ zfs_datasets }}"
+
+- name: Create ZFS datasets
+  command: >
+    zfs create
+    -o mountpoint={{ item.item.mountpoint }}
+    -o compression=lz4
+    -o atime=off
+    {{ item.item.name }}
+  when: item.rc != 0
+  loop: "{{ dataset_checks.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+# --- Pool-level properties ---
+
+- name: Set compression on pool
+  zfs:
+    name: "{{ array_pool_name }}"
+    state: present
+    extra_zfs_properties:
+      compression: lz4
+      atime: "off"
+
+# --- Monthly scrub ---
+
+- name: Set up monthly ZFS scrub cron
+  cron:
+    name: "ZFS scrub {{ array_pool_name }}"
+    job: "/usr/sbin/zpool scrub {{ array_pool_name }}"
+    special_time: monthly
+    user: root
