@@ -1,6 +1,5 @@
-virtual:
+loungebox:
   hosts:
-    192.168.205.3:
+    loungebox:
+      ansible_host: 192.168.205.3
       ansible_user: lounge
-      ansible_ssh_pass: lounge
-      ansible_become_pass: lounge
