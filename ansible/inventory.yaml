@@ -1,4 +1,4 @@
-loungebox:
+all:
   hosts:
     loungebox:
       ansible_host: 192.168.205.3

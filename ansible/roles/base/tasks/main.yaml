@@ -18,12 +18,6 @@
       - gnupg
     state: present
 
-- name: Deploy SSH authorized key for lounge user
-  authorized_key:
-    user: lounge
-    key: "{{ lookup('file', 'authorized_key.pub') }}"
-    state: present
-
 - name: Disable SSH password authentication
   lineinfile:
     path: /etc/ssh/sshd_config

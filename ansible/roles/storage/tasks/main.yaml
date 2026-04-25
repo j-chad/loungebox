@@ -60,16 +60,6 @@
   loop_control:
     label: "{{ item.item.name }}"
 
-# --- Pool-level properties ---
-
-- name: Set compression on pool
-  zfs:
-    name: "{{ array_pool_name }}"
-    state: present
-    extra_zfs_properties:
-      compression: lz4
-      atime: "off"
-
 # --- Monthly scrub ---
 
 - name: Set up monthly ZFS scrub cron

@@ -1,6 +1,8 @@
 #cloud-config
 autoinstall:
   version: 1
+  source:
+      id: ubuntu-server
   interactive-sections:
     - network
   identity:
