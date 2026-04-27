@@ -1,0 +1,58 @@
+# Directory structure expected by deploy.sh and docker-compose.yml
+- name: Create Eros data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: lounge
+    group: lounge
+    mode: "0755"
+  loop:
+    - /mnt/storage/eros
+    - /mnt/storage/eros/data
+    - /mnt/storage/eros/data/db
+    - /mnt/storage/eros/data/files
+    - /mnt/storage/eros/data/caddy
+    - /mnt/storage/eros/data/caddy-config
+    - /mnt/storage/eros/admin-build
+    - /mnt/storage/eros/client-build
+
+# deploy.sh targets ~/eros
+- name: Symlink ~/eros to /mnt/storage/eros
+  file:
+    src: /mnt/storage/eros
+    dest: /home/lounge/eros
+    state: link
+    owner: lounge
+    group: lounge
+
+# Template .env only if it doesn't exist — never overwrite secrets
+- name: Check if .env exists
+  stat:
+    path: /mnt/storage/eros/.env
+  register: env_file
+
+- name: Create .env template
+  template:
+    src: env.j2
+    dest: /mnt/storage/eros/.env
+    owner: lounge
+    group: lounge
+    mode: "0600"
+  when: not env_file.stat.exists
+
+# Backup script and cron
+- name: Deploy backup script
+  template:
+    src: backup.sh.j2
+    dest: /mnt/storage/eros/backup.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create daily backup cron (3am)
+  cron:
+    name: "Eros backup"
+    job: "/mnt/storage/eros/backup.sh >> /mnt/storage/eros/backup.log 2>&1"
+    hour: "3"
+    minute: "0"
+    user: root

@@ -4,5 +4,6 @@
     - base
     - storage
     - docker
-    - firewall
     - tailscale
+    - firewall
+    - eros

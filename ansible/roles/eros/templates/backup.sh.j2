@@ -1,0 +1,17 @@
+#!/bin/bash
+set -euo pipefail
+
+EROS_DIR=/mnt/storage/eros
+BACKUP_DIR=/mnt/storage/backups/eros/$(date +%Y-%m-%d)
+mkdir -p "$BACKUP_DIR"
+
+# SQLite safe backup (handles WAL mode)
+sqlite3 "$EROS_DIR/data/db/eros.sqlite" ".backup '$BACKUP_DIR/eros.sqlite'"
+
+# File uploads
+cp -r "$EROS_DIR/data/files/" "$BACKUP_DIR/files/"
+
+# Keep last 30 days
+find /mnt/storage/backups/eros/ -maxdepth 1 -mtime +30 -exec rm -rf {} +
+
+echo "$(date): Backup complete → $BACKUP_DIR"
