@@ -53,6 +53,6 @@
   cron:
     name: "Eros backup"
     job: "/mnt/storage/eros/backup.sh >> /mnt/storage/eros/backup.log 2>&1"
-    hour: "3"
+    hour: "13"
     minute: "0"
     user: root

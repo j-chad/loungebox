@@ -32,3 +32,11 @@
       APT::Periodic::Update-Package-Lists "1";
       APT::Periodic::Unattended-Upgrade "1";
     mode: "0644"
+
+- name: Schedule shutdown at 11pm daily
+  cron:
+    name: "Nightly shutdown"
+    job: "/usr/sbin/shutdown -h now"
+    hour: "23"
+    minute: "0"
+    user: root
