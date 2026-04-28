@@ -4,29 +4,46 @@
     state: present
 
 - name: Set UFW default deny incoming
-  command: ufw default deny incoming
-  changed_when: false
+  community.general.ufw:
+    direction: incoming
+    policy: deny
 
 - name: Set UFW default allow outgoing
-  command: ufw default allow outgoing
-  changed_when: false
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
 
 - name: Allow SSH on local network
-  command: ufw allow from 192.168.0.0/16 to any port 22 proto tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    from_ip: 192.168.0.0/16
 
 - name: Allow SSH on Tailscale interface
-  command: ufw allow in on tailscale0 to any port 22 proto tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    interface: tailscale0
+    direction: in
 
 - name: Allow HTTP on Tailscale interface
-  command: ufw allow in on tailscale0 to any port 80 proto tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+    interface: tailscale0
+    direction: in
 
 - name: Allow HTTPS on Tailscale interface
-  command: ufw allow in on tailscale0 to any port 443 proto tcp
-  changed_when: false
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+    interface: tailscale0
+    direction: in
 
 - name: Enable UFW
-  command: ufw --force enable
-  changed_when: false
+  community.general.ufw:
+    state: enabled

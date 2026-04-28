@@ -41,24 +41,15 @@
 
 # --- Datasets ---
 
-- name: Check if datasets exist
-  command: zfs list -H -o name {{ item.name }}
-  register: dataset_checks
-  failed_when: false
-  changed_when: false
-  loop: "{{ zfs_datasets }}"
-
 - name: Create ZFS datasets
-  command: >
-    zfs create
-    -o mountpoint={{ item.item.mountpoint }}
-    -o compression=lz4
-    -o atime=off
-    {{ item.item.name }}
-  when: item.rc != 0
-  loop: "{{ dataset_checks.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
+  community.general.zfs:
+    name: "{{ item.name }}"
+    state: present
+    extra_zfs_properties:
+      mountpoint: "{{ item.mountpoint }}"
+      compression: lz4
+      atime: "off"
+  loop: "{{ zfs_datasets }}"
 
 # --- Monthly scrub ---
 

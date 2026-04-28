@@ -18,6 +18,10 @@
       - gnupg
     state: present
 
+- name: Set system timezone to Pacific/Auckland
+  community.general.timezone:
+    name: Pacific/Auckland
+
 - name: Disable SSH password authentication
   lineinfile:
     path: /etc/ssh/sshd_config
