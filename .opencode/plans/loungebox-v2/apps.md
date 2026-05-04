@@ -218,7 +218,7 @@ scp -r client-build/* loungebox:/mnt/storage/eros/client-build/
 ssh loungebox "sudo systemctl restart eros"
 ```
 
-This is a cleaner separation: Nix owns infrastructure, the Eros deploy script owns application code.
+This is a cleaner separation: Nix owns infrastructure, the Eros deploy script owns application code. The Eros deploy script update is handled separately in the Eros repo — it's not part of this spec.
 
 ## Dockge (modules/dockge.nix)
 
@@ -247,7 +247,7 @@ Dockge will show editing capabilities for stacks (it's designed as a stack manag
 
 This is an acceptable tradeoff. Dockge's monitoring and control features (logs, start/stop, container status) are valuable enough to justify running it even if the editing features go unused.
 
-If Dockge supports a read-only or monitoring-only mode, enable it. If not, this is just a convention to follow: **don't edit stacks in Dockge, edit them in Nix.**
+The convention is simple: **don't edit stacks in Dockge, edit them in Nix.** If this becomes a problem, Dockge can be forked or replaced with a read-only alternative later.
 
 ## App Lifecycle
 

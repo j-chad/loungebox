@@ -146,6 +146,8 @@ Each app dataset gets:
 
 Snapshots protect against accidental deletion and app-level corruption. They do **not** protect against drive failure (the snapshots live on the same drives). Off-site backup is acknowledged as a gap and deferred.
 
+**Note:** Sanoid is only configured for the `storage` pool, not `rpool`. This is deliberate — the boot pool holds the NixOS system (rolled back via NixOS generations, not ZFS snapshots) and `/home` (which holds minimal state on a server). All important data lives on the `storage` pool.
+
 ### Per-App Backup Hooks
 
 Some apps need application-level consistency before a snapshot is useful. For example, SQLite in WAL mode may have uncommitted data in the WAL file that a raw ZFS snapshot wouldn't capture consistently.
@@ -180,5 +182,8 @@ Backup artifacts go to `storage/backups/<app>/` with 30-day retention (old backu
 
 ## Open Questions
 
-- **ARC memory sizing.** ZFS ARC (read cache) defaults to using up to half of system RAM. Need to check how much RAM the machine has. If <16GB, may need to set `boot.kernelParams = [ "zfs.zfs_arc_max=<bytes>" ]` to leave room for Docker.
 - **Disk IDs for disko config.** The `/dev/disk/by-id/` paths for the NVMe and all 4 WD Red drives must be discovered before the first install. Boot the NixOS USB, SSH in, and run `ls /dev/disk/by-id/` to find them. The existing Ansible config has the WD Red IDs but they should be re-verified. These go into `disk.nix`.
+
+## Resolved
+
+- **ARC memory sizing.** The machine has 32GB RAM. ZFS ARC defaults to using up to half (~16GB), leaving plenty for Docker containers. No capping needed.

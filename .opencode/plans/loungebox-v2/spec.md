@@ -88,10 +88,8 @@ Split into focused documents:
 
 ## Open Questions
 
-1. **RAM amount.** Affects ZFS ARC cache sizing. Check on the machine — if less than 16GB, may need to cap ARC to leave room for Docker containers.
-2. **Dockge read-only mode.** Dockge is designed to manage stacks, not just view them. Need to verify whether it can be configured in a monitoring-only mode, or if editing features should just be ignored by convention.
-3. **Gaming DRM/session setup.** Gamescope in DRM mode with NVIDIA, audio routing, and controller input needs hardware testing. This is the highest-risk area of the spec. See [gaming.md](gaming.md) for details.
-4. **Eros deploy script changes.** The Eros repo's `deploy.sh` needs updating to match the new model (SCP builds + restart service). This is a change in the Eros repo, not this one.
+1. **Gaming DRM/session setup.** Gamescope in DRM mode with NVIDIA, audio routing, and controller input needs hardware testing. This is the highest-risk area of the spec. See [gaming.md](gaming.md) for details.
+2. **Disk IDs for disko config.** The `/dev/disk/by-id/` paths for the NVMe and all 4 WD Red drives need to be discovered on first boot. See [zfs.md](zfs.md) for details.
 
 ## Milestones
 

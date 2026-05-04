@@ -27,6 +27,7 @@ NixOS has built-in NVIDIA support. The proprietary driver is declared in the con
   hardware.nvidia = {
     modesetting.enable = true;
     open = false;  # Use proprietary driver (better for gaming)
+    powerManagement.enable = true;  # GPU clocks down when idle, ramps up for gaming
   };
 
   # Legacy option name — configures GPU drivers regardless of X11 usage
@@ -79,7 +80,8 @@ The correct HDMI audio output device may need to be configured after testing on 
 The `lounge` user needs access to input devices for controller support:
 
 ```nix
-users.users.lounge.extraGroups = [ "docker" "wheel" "input" ];
+users.users.lounge.extraGroups = [ "input" "video" ];
+# Note: "docker" and "wheel" are set in base.nix — NixOS merges list options automatically
 ```
 
 Steam handles controller mapping natively via Steam Input.
@@ -163,8 +165,13 @@ No special handling needed — systemd's normal shutdown sequence handles it.
 
 ## Open Questions
 
-- **DRM device permissions.** Gamescope in DRM mode needs access to `/dev/dri/card*`. The `lounge` user may need to be in the `video` group, or a seat manager (`seatd`) may be needed. Test on hardware.
-- **Display output selection.** If the NVIDIA GPU has multiple outputs (HDMI, DisplayPort), gamescope needs to target the correct one for the TV. This may require `GAMESCOPE_PREFERRED_OUTPUT` or `WLR_DRM_CONNECTORS` environment variables. Needs hardware testing.
-- **Audio output device.** PipeWire may need explicit configuration to select the NVIDIA HDMI audio output over other audio devices (e.g., motherboard audio). Test on hardware.
-- **GPU power management.** NVIDIA GPUs on Linux can be configured for power saving when idle. Worth investigating `nvidia-powerd` or similar once gaming is working.
+All of these require hardware testing and are expected to be resolved during the v0.5 milestone:
+
+- **DRM device permissions.** Gamescope in DRM mode needs access to `/dev/dri/card*`. The `lounge` user may need to be in the `video` group, or a seat manager (`seatd`) may be needed.
+- **Display output selection.** If the NVIDIA GPU has multiple outputs (HDMI, DisplayPort), gamescope needs to target the correct one for the TV. This may require `GAMESCOPE_PREFERRED_OUTPUT` or `WLR_DRM_CONNECTORS` environment variables.
+- **Audio output device.** PipeWire may need explicit configuration to select the NVIDIA HDMI audio output over other audio devices (e.g., motherboard audio).
 - **Session management.** The systemd service approach may need refinement. If DRM access is problematic, a lightweight session manager like `greetd` with an auto-login session for gaming could be an alternative.
+
+## Resolved
+
+- **GPU power management.** Handled by `hardware.nvidia.powerManagement.enable = true` — the GPU clocks down when idle and ramps up for gaming automatically.

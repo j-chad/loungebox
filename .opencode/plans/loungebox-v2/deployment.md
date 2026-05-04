@@ -286,10 +286,13 @@ case "$COMMAND" in
     echo "Done."
     ;;
   update)
-    echo "Updating nixpkgs and deploying to $HOST..."
-    ssh "$HOST" "cd $REPO_PATH && git pull && nix flake update && sudo nixos-rebuild switch --flake .#loungebox"
-    echo "Done. Remember to commit the updated flake.lock:"
-    echo "  ssh $HOST 'cd $REPO_PATH && git add flake.lock && git commit -m \"update nixpkgs\"'"
+    echo "Updating nixpkgs..."
+    nix flake update
+    git add flake.lock && git commit -m "update nixpkgs"
+    git push
+    echo "Deploying to $HOST..."
+    ssh "$HOST" "cd $REPO_PATH && git pull && sudo nixos-rebuild switch --flake .#loungebox"
+    echo "Done."
     ;;
   rollback)
     echo "Rolling back $HOST to previous generation..."
@@ -331,10 +334,13 @@ esac
 
 ### What `update` Does
 
-1. Everything `deploy` does, plus:
-2. Runs `nix flake update` first — updates `flake.lock` to the latest nixpkgs commit.
-3. This is how security patches are applied. NixOS doesn't have a "security only" update mode — all nixpkgs changes come together.
-4. If something breaks, run `./deploy.sh rollback`.
+1. Runs `nix flake update` **on the laptop** — updates `flake.lock` to the latest nixpkgs commit.
+2. Commits and pushes the updated `flake.lock`.
+3. Deploys to the server (git pull + nixos-rebuild).
+4. This is how security patches are applied. NixOS doesn't have a "security only" update mode — all nixpkgs changes come together.
+5. If something breaks, run `./deploy.sh rollback`.
+
+Updates run on the laptop so it remains the single source of commits. The server only ever does `git pull` — it never creates commits.
 
 ### When to Use
 
