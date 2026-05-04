@@ -1,9 +1,0 @@
-- hosts: loungebox
-  become: true
-  roles:
-    - base
-    - storage
-    - docker
-    - tailscale
-    - firewall
-    - eros
