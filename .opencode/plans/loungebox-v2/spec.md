@@ -40,7 +40,7 @@ loungebox/
     loungebox/
       default.nix        # Host-level config (imports modules)
       hardware.nix       # Hardware-specific config (generated during install)
-      disk.nix           # ZFS partitioning for NVMe boot drive
+      disk.nix           # disko config — NVMe partitions, ZFS pools, all datasets
   modules/
     base.nix             # System packages, locale, timezone, SSH, nightly shutdown
     zfs.nix              # ZFS storage pool, datasets, scrub schedule
@@ -60,6 +60,7 @@ The `modules/` directory contains infrastructure concerns. The `apps/` directory
 
 - **OS:** NixOS (latest stable release), Flakes
 - **Configuration:** Single flake in a git repo, applied via `nixos-rebuild switch`
+- **Installation:** disko (declarative disk partitioning) + nixos-anywhere (remote installer from macOS)
 - **Boot drive:** NVMe with ZFS root (`rpool`)
 - **Storage:** ZFS RAIDZ1 on 4x WD Red drives (`storage` pool), `ashift=12`, LZ4 compression, `atime=off`
 - **Containers:** Docker + Docker Compose, stacks declared in Nix modules
@@ -95,11 +96,11 @@ Split into focused documents:
 ## Milestones
 
 ### v0.1 — Bootable NixOS with ZFS
-- NixOS installed on NVMe with ZFS root.
-- ZFS storage pool created on WD Reds.
+- Flake structure with `hosts/loungebox/` and base modules.
+- disko config (`disk.nix`) declaring NVMe partitions, ZFS root pool, and storage pool.
 - Base system config: hostname, locale, timezone, SSH, `lounge` user.
-- Flake structure with `hosts/loungebox/` and a few modules.
-- **Test in a VM first** (without ZFS storage pool — just the NVMe/root part).
+- **Test in a VM first** — use `nixos-rebuild build-vm --flake .#loungebox` to verify the config builds and boots (VM can't test real ZFS hardware, but catches Nix syntax and module errors).
+- **Install on hardware** — boot NixOS USB, run `nixos-anywhere` from Mac. One command creates everything.
 
 ### v0.2 — Networking + Secrets
 - **Pre-requisite:** Set up developer age key on laptop (`age-keygen`, save to Bitwarden).

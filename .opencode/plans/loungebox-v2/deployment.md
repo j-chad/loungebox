@@ -4,107 +4,206 @@ Part of [LoungeBox v2 spec](spec.md).
 
 ## NixOS Installation
 
-Fresh install on the NVMe, with ZFS root. The WD Red storage pool is also created during installation.
+The installation is fully automated using **disko** (declarative disk partitioning) and **nixos-anywhere** (remote NixOS installer). One command from your Mac partitions all drives, creates ZFS pools and datasets, installs NixOS with the full flake config, and reboots into the finished system.
 
-### Prerequisites
+### disko — Declarative Disk Layout
 
-- NixOS minimal ISO on a USB stick (latest stable release).
-- Physical access to the NAS (keyboard + monitor/TV for installation).
-- SSH public key for the `lounge` user.
+Instead of manual `parted` and `zpool create` commands, the entire disk layout is declared in Nix (`hosts/loungebox/disk.nix`). disko handles partitioning, formatting, ZFS pool creation, and dataset creation during installation.
 
-### Installation Steps
+```nix
+# hosts/loungebox/disk.nix
+{ ... }:
+{
+  disko.devices = {
+    disk = {
+      nvme = {
+        type = "disk";
+        device = "/dev/disk/by-id/<nvme-disk-id>";
+        content = {
+          type = "gpt";
+          partitions = {
+            ESP = {
+              size = "512M";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+              };
+            };
+            zfs = {
+              size = "100%";
+              content = {
+                type = "zfs";
+                pool = "rpool";
+              };
+            };
+          };
+        };
+      };
+      # WD Red drives — identified by /dev/disk/by-id/ paths
+      wd-red-1 = {
+        type = "disk";
+        device = "/dev/disk/by-id/ata-WDC_WD40EFZX-<id1>";
+        content = { type = "zfs"; pool = "storage"; };
+      };
+      wd-red-2 = {
+        type = "disk";
+        device = "/dev/disk/by-id/ata-WDC_WD40EFZX-<id2>";
+        content = { type = "zfs"; pool = "storage"; };
+      };
+      wd-red-3 = {
+        type = "disk";
+        device = "/dev/disk/by-id/ata-WDC_WD40EFZX-<id3>";
+        content = { type = "zfs"; pool = "storage"; };
+      };
+      wd-red-4 = {
+        type = "disk";
+        device = "/dev/disk/by-id/ata-WDC_WD40EFZX-<id4>";
+        content = { type = "zfs"; pool = "storage"; };
+      };
+    };
+    zpool = {
+      rpool = {
+        type = "zpool";
+        options = { ashift = "12"; };
+        rootFsOptions = {
+          compression = "lz4";
+          atime = "off";
+          xattr = "sa";
+          acltype = "posixacl";
+          mountpoint = "none";
+        };
+        datasets = {
+          root = {
+            type = "zfs_fs";
+            mountpoint = "/";
+            options.mountpoint = "legacy";
+          };
+          nix = {
+            type = "zfs_fs";
+            mountpoint = "/nix";
+            options.mountpoint = "legacy";
+          };
+          home = {
+            type = "zfs_fs";
+            mountpoint = "/home";
+            options.mountpoint = "legacy";
+          };
+        };
+        # Take blank snapshot after creation for potential "erase your darlings" later
+        postCreateHook = "zfs snapshot rpool/root@blank";
+      };
+      storage = {
+        type = "zpool";
+        mode = "raidz";
+        options = { ashift = "12"; };
+        rootFsOptions = {
+          compression = "lz4";
+          atime = "off";
+          xattr = "sa";
+          acltype = "posixacl";
+        };
+        mountpoint = "/mnt/storage";
+        datasets = {
+          eros = {
+            type = "zfs_fs";
+            mountpoint = "/mnt/storage/eros";
+          };
+          backups = {
+            type = "zfs_fs";
+            mountpoint = "/mnt/storage/backups";
+          };
+          caddy = {
+            type = "zfs_fs";
+            mountpoint = "/mnt/storage/caddy";
+          };
+          dockge = {
+            type = "zfs_fs";
+            mountpoint = "/mnt/storage/dockge";
+          };
+        };
+      };
+    };
+  };
+}
+```
 
-1. **Boot from USB** — NixOS minimal ISO.
-2. **Network** — Connect to LAN (DHCP or set a static IP).
-3. **Partition the NVMe:**
-   ```bash
-   # Identify the NVMe device
-   ls /dev/disk/by-id/nvme-*
+Key points:
+- **`ashift=12`** on both pools — critical for 4KB sector drives. Cannot be changed after creation.
+- **`mountpoint=legacy`** on rpool datasets — required for NixOS ZFS root (NixOS manages mounts via `fileSystems`).
+- **RAIDZ1 mode** on the storage pool — one-drive fault tolerance across 4 drives.
+- **All datasets declared** — disko creates them all in one pass during installation.
+- **The `@blank` snapshot** is taken via `postCreateHook` for potential future "erase your darlings" pattern.
 
-   # Create GPT partition table
-   parted /dev/disk/by-id/<nvme> -- mklabel gpt
-   
-   # EFI system partition (512MB)
-   parted /dev/disk/by-id/<nvme> -- mkpart ESP fat32 1MiB 513MiB
-   parted /dev/disk/by-id/<nvme> -- set 1 esp on
-   mkfs.fat -F 32 /dev/disk/by-id/<nvme>-part1
-   
-   # ZFS partition (remainder)
-   # (ZFS pool creation handles formatting)
-   ```
-4. **Create ZFS boot pool (`rpool`):**
-   ```bash
-   zpool create -f \
-     -o ashift=12 \
-     -O mountpoint=none \
-     -O compression=lz4 \
-     -O atime=off \
-     -O xattr=sa \
-     -O acltype=posixacl \
-     rpool /dev/disk/by-id/<nvme>-part2
-   
-   zfs create -o mountpoint=legacy rpool/root
-   zfs create -o mountpoint=legacy rpool/nix
-   zfs create -o mountpoint=legacy rpool/home
-   
-   # Take blank snapshot for potential "erase your darlings" later
-   zfs snapshot rpool/root@blank
-   ```
-5. **Create ZFS storage pool:**
-   ```bash
-   zpool create -f \
-     -o ashift=12 \
-     -O compression=lz4 \
-     -O atime=off \
-     -O xattr=sa \
-     -O acltype=posixacl \
-     -m /mnt/storage \
-     storage raidz \
-     /dev/disk/by-id/ata-WDC_WD40EFZX-<id1> \
-     /dev/disk/by-id/ata-WDC_WD40EFZX-<id2> \
-     /dev/disk/by-id/ata-WDC_WD40EFZX-<id3> \
-     /dev/disk/by-id/ata-WDC_WD40EFZX-<id4>
-   ```
-6. **Mount filesystems for installation:**
-   ```bash
-   mount -t zfs rpool/root /mnt
-   mkdir -p /mnt/nix /mnt/home /mnt/boot
-   mount -t zfs rpool/nix /mnt/nix
-   mount -t zfs rpool/home /mnt/home
-   mount /dev/disk/by-id/<nvme>-part1 /mnt/boot
-   
-   # Import storage pool at the right mount point
-   zpool export storage
-   zpool import -R /mnt storage
-   ```
-7. **Generate initial NixOS config:**
-   ```bash
-   nixos-generate-config --root /mnt
-   ```
-   This creates `/mnt/etc/nixos/configuration.nix` and `hardware-configuration.nix`. The hardware config captures the ZFS pool and disk layout.
-8. **Edit minimal config** — Enable SSH, create `lounge` user with SSH key, set hostname. Just enough to boot and connect remotely.
-9. **Install:**
-   ```bash
-   nixos-install
-   ```
-10. **Reboot** into the new NixOS installation.
-11. **Clone this repo** onto the machine:
-    ```bash
-    git clone <repo-url> ~/loungebox
-    ```
-12. **Apply the full config:**
-    ```bash
-    cd ~/loungebox
-    sudo nixos-rebuild switch --flake .#loungebox
-    ```
+### nixos-anywhere — Remote Installation
 
-After step 12, the system is fully configured. All subsequent changes go through the normal deploy workflow.
+nixos-anywhere runs from your Mac, SSHes into a NixOS live environment on the target machine, and handles everything:
+
+#### Prerequisites
+
+- **On the NAS:** Boot from a NixOS minimal USB stick. Connect to LAN. Note the IP address.
+- **On your Mac:** Nix installed (`curl -L https://nixos.org/nix/install | sh`), or use the flake directly.
+- **Disk IDs:** The `/dev/disk/by-id/` paths for the NVMe and all 4 WD Red drives must be known and set in `disk.nix`. To discover them, SSH into the live environment and run `ls /dev/disk/by-id/`.
+
+#### Installation Command
+
+```bash
+# From your Mac:
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#loungebox \
+  --build-on-remote \
+  root@<nas-ip>
+```
+
+- **`--flake .#loungebox`** — uses the flake in the current directory, targeting the `loungebox` system config.
+- **`--build-on-remote`** — builds the NixOS system on the target machine (avoids needing a Linux builder on macOS).
+- **`root@<nas-ip>`** — SSHes into the NixOS live environment (root has no password in the live environment, SSH is enabled).
+
+#### What Happens
+
+1. nixos-anywhere SSHes into the live environment.
+2. Runs disko — partitions the NVMe, creates both ZFS pools and all datasets.
+3. Installs NixOS with the full flake config.
+4. Reboots.
+5. The machine comes up fully configured — SSH, Docker, Caddy, firewall, everything.
+
+The entire process takes ~10-15 minutes.
+
+#### Flake Inputs
+
+disko and nixos-anywhere need to be declared in the flake:
+
+```nix
+# In flake.nix:
+inputs = {
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  sops-nix.url = "github:Mic92/sops-nix";
+  disko = {
+    url = "github:nix-community/disko";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+};
+```
+
+nixos-anywhere is not a flake input — it's run directly from your Mac via `nix run`. Only disko needs to be in the flake (it provides the NixOS module that declares the disk layout).
 
 ### Post-Installation
 
-- **Tailscale:** Run `sudo tailscale up` to authenticate (interactive, one-time).
-- **sops-nix bootstrap:** Follow the sequence in [secrets.md](secrets.md#initial-bootstrap).
-- **Verify** ZFS pools are mounted, Docker is running, Caddy is serving.
+After the machine reboots into NixOS:
+
+1. **Verify SSH access:** `ssh lounge@<nas-ip>` (should work with your SSH key).
+2. **Tailscale:** `sudo tailscale up` — interactive browser auth, one-time.
+3. **sops-nix bootstrap:** Follow the sequence in [secrets.md](secrets.md#initial-bootstrap).
+4. **Verify** ZFS pools are mounted (`zpool status`), Docker is running (`docker ps`), Caddy is serving.
+
+### Re-Installation
+
+If you ever need to reinstall from scratch:
+1. Boot from NixOS USB.
+2. Run the same `nixos-anywhere` command.
+3. disko recreates everything. **This is destructive — all data on all drives is wiped.**
+4. Restore data from backups after installation.
 
 ## Base System Config (modules/base.nix)
 

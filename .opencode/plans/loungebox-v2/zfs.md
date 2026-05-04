@@ -62,24 +62,11 @@ The 4x WD Red 4TB drives form a RAIDZ1 pool for app data and backups. This provi
 
 ### Pool Creation
 
-Done once during installation (not managed by Nix — pool creation is destructive and non-idempotent):
+Both pools and all datasets are declared in `hosts/loungebox/disk.nix` using **disko**. During installation, nixos-anywhere runs disko which creates the pool, sets all properties, and creates all datasets in one pass. See [deployment.md](deployment.md) for the full disko config.
 
-```bash
-zpool create -f \
-  -o ashift=12 \
-  -O compression=lz4 \
-  -O atime=off \
-  -O xattr=sa \
-  -O acltype=posixacl \
-  -m /mnt/storage \
-  storage raidz \
-  /dev/disk/by-id/ata-WDC_WD40EFZX-... \
-  /dev/disk/by-id/ata-WDC_WD40EFZX-... \
-  /dev/disk/by-id/ata-WDC_WD40EFZX-... \
-  /dev/disk/by-id/ata-WDC_WD40EFZX-...
-```
+The pool is **not** created by manual commands. The disko config is the source of truth for the disk layout.
 
-Critical settings:
+Critical settings (declared in disko):
 - **`ashift=12`** — matches 4KB physical sectors on WD Reds. If ZFS guesses wrong and uses 512-byte alignment, write performance degrades 2-10x. **Cannot be changed after pool creation.**
 - **`compression=lz4`** — transparent compression with minimal CPU overhead. Often results in a net performance gain (less data to write to disk).
 - **`atime=off`** — disables access time tracking. Without this, every read triggers a metadata write — pointless overhead, especially for SQLite.
@@ -87,7 +74,7 @@ Critical settings:
 
 ### Pool Import in NixOS
 
-The Nix config imports the pool (not creates it):
+The Nix config imports the pool at boot:
 
 ```nix
 boot.zfs.extraPools = [ "storage" ];
@@ -97,22 +84,22 @@ This ensures the `storage` pool is imported at boot and its datasets are mounted
 
 ### Per-App Datasets
 
-Each app gets its own ZFS dataset under `storage/`. Datasets are created either during installation or by the app module (with an existence check).
+Each app gets its own ZFS dataset under `storage/`. All initial datasets are declared in the disko config and created during installation:
 
-| Dataset | Mount | Created By |
-|---------|-------|-----------|
-| `storage/eros` | `/mnt/storage/eros` | Installation (manual) |
-| `storage/backups` | `/mnt/storage/backups` | Installation (manual) |
-| `storage/caddy` | `/mnt/storage/caddy` | Installation (manual) |
-| `storage/dockge` | `/mnt/storage/dockge` | Installation (manual) |
-| `storage/<app>` | `/mnt/storage/<app>` | Created manually when adding a new app |
+| Dataset | Mount | Declared In |
+|---------|-------|------------|
+| `storage/eros` | `/mnt/storage/eros` | `disk.nix` (disko) |
+| `storage/backups` | `/mnt/storage/backups` | `disk.nix` (disko) |
+| `storage/caddy` | `/mnt/storage/caddy` | `disk.nix` (disko) |
+| `storage/dockge` | `/mnt/storage/dockge` | `disk.nix` (disko) |
+| `storage/<app>` | `/mnt/storage/<app>` | Added to `disk.nix` when adding a new app |
 
-Per-app datasets are created manually during installation or when adding a new app:
+When adding a future app, add its dataset to `disk.nix` and create it manually on the running system:
 ```bash
 zfs create storage/<app-name>
 ```
 
-The Nix config does **not** create datasets — dataset creation is destructive and should be explicit. The app module's activation script creates the directory structure within the dataset, but assumes the dataset already exists and is mounted.
+disko only runs during installation — it doesn't manage datasets on subsequent rebuilds. New datasets are added to `disk.nix` (so a reinstall would recreate them) but created manually on the live system.
 
 Benefits of per-app datasets:
 - **Independent snapshots** — snapshot Eros without snapshotting everything else.
@@ -194,5 +181,4 @@ Backup artifacts go to `storage/backups/<app>/` with 30-day retention (old backu
 ## Open Questions
 
 - **ARC memory sizing.** ZFS ARC (read cache) defaults to using up to half of system RAM. Need to check how much RAM the machine has. If <16GB, may need to set `boot.kernelParams = [ "zfs.zfs_arc_max=<bytes>" ]` to leave room for Docker.
-- **NVMe disk ID.** Need to discover the actual `/dev/disk/by-id/` path for the NVMe during installation.
-- **WD Red disk IDs.** The four drive IDs need to be confirmed during installation. The existing Ansible config has the IDs but they should be re-verified.
+- **Disk IDs for disko config.** The `/dev/disk/by-id/` paths for the NVMe and all 4 WD Red drives must be discovered before the first install. Boot the NixOS USB, SSH in, and run `ls /dev/disk/by-id/` to find them. The existing Ansible config has the WD Red IDs but they should be re-verified. These go into `disk.nix`.
