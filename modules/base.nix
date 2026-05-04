@@ -16,8 +16,7 @@
     extraGroups = [ "docker" "wheel" ];
     hashedPassword = "!"; # Disable password login — SSH key only
     openssh.authorizedKeys.keys = [
-      # TODO: Replace with your actual SSH public key
-      "ssh-ed25519 AAAA_REPLACE_ME jackson@laptop"
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJTNZhXN5jf4TMcj8oYwgM/PxLGcVKRadaVNDI3zXxXT"
     ];
   };
 
